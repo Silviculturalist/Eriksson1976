@@ -86,6 +86,17 @@ class ErikssonStand{
           //Fetch the initial basal area.
           BasalAreaM2 = initialBA(DominantHeight,StemsStart,1); // Always planted.
 
+          //Calculate QMD (Area of the mean basal area stem.), in cm.
+          QmdCm = 2* sqrt(((BasalAreaM2/StemsStart)*10000)/3.14159265359);
+
+          //Form height
+          this->formheight();
+
+          //Volume of the stand.
+          Volume = BasalAreaM2*FormHeight;
+
+
+
 
         };
         
@@ -113,6 +124,8 @@ class ErikssonStand{
 
 //Specific functions.
 
+
+
 void ErikssonStand::report()
 {
   std::cout << "Spruce stand G" << H100 << "Latitude " << Latitude << "\n"
@@ -120,7 +133,10 @@ void ErikssonStand::report()
             << "Total Age = " << Age << "\n"
             << "Age BH = "<< AgeBH << "\n"
             << "Dominant Height = "<< DominantHeight << "\n"
-            << "BA = " << BasalAreaM2 << std::endl;
+            << "BA = " << BasalAreaM2 << "\n"
+            << "Form Height = " << FormHeight << "\n"
+            << "Volume m3sk = " << Volume << "\n"
+            << "QMDcm = " << QmdCm << std::endl;
 }
 
 
