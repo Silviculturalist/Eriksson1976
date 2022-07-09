@@ -4,7 +4,7 @@
 
 //Background function
 
-//Get an initial BA from stems and height.
+//Get an initial BA from stems and height. f. 7.2.1, p. 99.
 double initialBA(double dominantheight, double stems, bool plantedbool=true) 
 {
   double b1{0};
@@ -27,6 +27,7 @@ class ErikssonStand{
     public:
         double H100{0};
         double DominantHeight{0};
+        double Latitude{0};
         int Age{0};
         int AgeBH{0};
         double BasalAreaM2{0};
@@ -65,6 +66,7 @@ class ErikssonStand{
         void formheight(); //The Form-Height of a stand.
         void selfthinneddiameter(); //Calculate the diameter of the self-thinned stems.
         void stemsselfthinned(); //Calculate the number of self-thinned stems.
+        void setHeight(); // Dominant height at age + increment.
 
 
 
@@ -77,6 +79,29 @@ class ErikssonStand{
 };
 
 //Specific functions.
+
+
+void ErikssonStand::setHeight()
+{
+  if(Latitude>60){ //Norrland and Kopparbergs County (pre-1998 county reorganisation)
+    DominantHeight = HagglundHeightSpruceNorth(
+      H100,
+      (100-HagglundTimeToBreastHeightSpruceNorth(H100,Latitude,plantedbool)),
+      (Age-HagglundTimeToBreastHeightSpruceNorth(H100,Latitude,plantedbool)),
+      Latitude,
+      plantedbool
+      );
+  } else { //Southern Sweden.
+    DominantHeight = HagglundHeightSpruceSouth(
+      H100,
+      (100-HagglundTimeToBreastHeightSpruceSouth(H100)),
+      (Age-HagglundTimeToBreastHeightSpruceSouth(H100))
+    );
+  }
+
+}
+
+
 
 void ErikssonStand::stemsselfthinned() 
 {
