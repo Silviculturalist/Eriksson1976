@@ -1,0 +1,7 @@
+make --dry-run --always-make --keep-going --print-directory
+make: Entering directory `/Users/csvi0001/Desktop/CppTraining/Eriksson1976'
+ 
+make: Leaving directory `/Users/csvi0001/Desktop/CppTraining/Eriksson1976'
+ 
+make: *** No targets specified and no makefile found.  Stop.
+
