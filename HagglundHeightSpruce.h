@@ -50,12 +50,12 @@ double HagglundHeightSpruceSouth(double heightm, double age, double age2)
     T13 = 4.9546+0.63934*T26+0.031992*T26*T26;
     
   }
-
+/*
   if(A2>400) std::cout << "Too high productivity, outside of the material." << std::endl;
   if(A2<250) std::cout << "Too low productivity, outside of the material." << std::endl;
   if(A2>375 && H1>267) std::cout << "Too old stand, outside of the material." << std::endl;
   if(age>90) std::cout << "Too old stand, outside of the material." << std::endl;
-
+ */
   H2  = (13+A2*pow((1-exp((-age2*RK))),RM2))/10 ;
 
   return H2;
@@ -136,7 +136,7 @@ double HagglundHeightSpruceNorth(double heightm, double age, double age2, double
 
   if(latitude>=67 || latitude<=60)
   {
-    std::cout << "Warning - outside of latitudinal range, 60° <= L <= 67° N, using f. 8.4" << std::endl;
+    //std::cout << "Warning - outside of latitudinal range, 60° <= L <= 67° N, using f. 8.4" << std::endl;
     B =  3.4501;
     C = 0.77518;
     D = -0.42579;
@@ -165,10 +165,10 @@ double HagglundHeightSpruceNorth(double heightm, double age, double age2, double
     AI1 = (DIF>0)?AI3:AI1;
 
   }
-
+/*
   if(A2>336) std::cout << "Warning - too high productivity, outside of the material" << std::endl;
   if(A2<189) std::cout << "Warning - too low productivity, outside of the material" << std::endl;
-
+*/
   T26 = (-1/RK)*log((1-pow((13/A2),(1/RM2))));
   T13 = P*(7.0287+0.66118*T26);
 
@@ -200,7 +200,7 @@ double HagglundTimeToBreastHeightSpruceNorth(double H100, double latitude, bool 
 
   if(latitude>=67 || latitude<=60)
   {
-    std::cout << "Warning - outside of latitudinal range, 60° <= L <= 67° N, using f. 8.4" << std::endl;
+   // std::cout << "Warning - outside of latitudinal range, 60° <= L <= 67° N, using f. 8.4" << std::endl;
     B =  3.4501;
     C = 0.77518;
     D = -0.42579;
@@ -237,6 +237,52 @@ double HagglundTimeToBreastHeightSpruceNorth(double H100, double latitude, bool 
 }
 
 
+//Always assumes planted. Decides on function with cutoff at lat 60°.
+//This is not used to find time to breast height (1.3m). If targetHeight is 1.31m or less, return is age = 1.
+double BHAgeFinder(double h100, double latitude, double targetHeight){ 
+    double AgeEstimate{1};
+    double currentHeight{1.31}; //try 1.3 m (breast height).
+    int HeightTest{1};
+
+    if(latitude>60){ // Northern Sweden
+        do
+        {
+            try
+            {
+                currentHeight= HagglundHeightSpruceNorth(h100,(100-HagglundTimeToBreastHeightSpruceNorth(h100,latitude,1)),AgeEstimate,latitude,1);
+                throw(1);
+            }
+            catch(int errorNum){
+                // Nothing to be done.
+            }
+            
+            HeightTest = (targetHeight > currentHeight)?1:0;
+            AgeEstimate+=0.1;
+        } while (HeightTest==1);
+        
+    } else { //Southern Sweden.
+        do
+        {
+            try
+            {
+                currentHeight = HagglundHeightSpruceSouth(h100,(100-HagglundTimeToBreastHeightSpruceSouth(h100)),AgeEstimate);
+                throw(1);
+            }
+            catch(int errorNum){
+                //Nothing to be done.
+            }
+            
+            HeightTest = (targetHeight > currentHeight)?1:0;
+            AgeEstimate+=0.1;
+        } while (HeightTest==1);
+
+    }
+
+    return AgeEstimate-0.1; //while loop will run one too many times.
+}
+
+
+
 /*
 //The following can be copy-pasted into own file for testing.
 
@@ -256,6 +302,12 @@ int main()
             << "North G8, Lat 61, Planted, 100 yrs Total: " <<  HagglundHeightSpruceNorth(8,100-HagglundTimeToBreastHeightSpruceNorth(8,61,1),100-HagglundTimeToBreastHeightSpruceNorth(8,61,1),61,1) << "\n"
             << "North G16, Lat 61, Planted, 100 yrs Total: " <<  HagglundHeightSpruceNorth(16,100-HagglundTimeToBreastHeightSpruceNorth(16,61,1),100-HagglundTimeToBreastHeightSpruceNorth(16,61,1),61,1) << "\n"
             << std::endl;
+
+  std::cout << "Lat 57, G32, -1 m at ageBH = " << TotalAgeFinder(32,57,-1) << "\n"
+            << "Lat 61, G16, 10m at ageBH = " << TotalAgeFinder(16,61,10) << "\n"
+            << std::endl;
+
+    return 0 ;
 
   return 0;
 }
