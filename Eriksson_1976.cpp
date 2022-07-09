@@ -55,7 +55,39 @@ class ErikssonStand{
         double SelfThinnedBAPeriod{0};
         double ThinnedBALastPeriod{0};
         double GroupStructureIndex{0}; //Coefficient of variation for the BA under bark on 5 meter circular plots inH100de the sample plot.. in percent.
-        int plantedbool{1}; // 1 if planted, 0 if natural regeneration.
+        int Plantedbool{1}; // 1 if planted, 0 if natural regeneration.
+        
+        //Constructors
+        ErikssonStand(double h100, double startHeight, double latitude, int stems){
+          H100 = h100;
+          Latitude= latitude;
+          AgeBH  = (int) (BHAgeFinder(h100,latitude,startHeight)+0.5); //round to integer.
+          //Get total age by adding time to breast height, here with ternary operator to distinguish north and south sweden.
+          Age = (int) (((latitude>60)?(AgeBH + HagglundTimeToBreastHeightSpruceNorth(h100,latitude,1)):(AgeBH + HagglundTimeToBreastHeightSpruceSouth(h100)))+0.5);
+          StemsStart = stems;
+
+          //Set the starting height which fits truncated Ages.
+          if(Latitude>60){ //Norrland and Kopparbergs County (pre-1998 county reorganisation)
+            DominantHeight = HagglundHeightSpruceNorth(
+              H100,
+              (100-HagglundTimeToBreastHeightSpruceNorth(H100,Latitude,Plantedbool)),
+              (AgeBH),
+              Latitude,
+              Plantedbool
+              );
+          } else { //Southern Sweden.
+            DominantHeight = HagglundHeightSpruceSouth(
+              H100,
+              (100-HagglundTimeToBreastHeightSpruceSouth(H100)),
+              (AgeBH)
+            );
+          }
+
+          //Fetch the initial basal area.
+          BasalAreaM2 = initialBA(DominantHeight,StemsStart,1); // Always planted.
+
+
+        };
         
         void barkprocentaddition(); // Bark percent addition to BA.
         void barkprocentremoval(); //Bark percent removal to BA.
@@ -67,6 +99,7 @@ class ErikssonStand{
         void selfthinneddiameter(); //Calculate the diameter of the self-thinned stems.
         void stemsselfthinned(); //Calculate the number of self-thinned stems.
         void setHeight(); // Dominant height at age + increment.
+        void report();
 
 
 
@@ -80,16 +113,26 @@ class ErikssonStand{
 
 //Specific functions.
 
+void ErikssonStand::report()
+{
+  std::cout << "Spruce stand G" << H100 << "Latitude " << Latitude << "\n"
+            << "N = " << StemsStart << "\n"
+            << "Total Age = " << Age << "\n"
+            << "Age BH = "<< AgeBH << "\n"
+            << "Dominant Height = "<< DominantHeight << "\n"
+            << "BA = " << BasalAreaM2 << std::endl;
+}
+
 
 void ErikssonStand::setHeight()
 {
   if(Latitude>60){ //Norrland and Kopparbergs County (pre-1998 county reorganisation)
     DominantHeight = HagglundHeightSpruceNorth(
       H100,
-      (100-HagglundTimeToBreastHeightSpruceNorth(H100,Latitude,plantedbool)),
-      (Age-HagglundTimeToBreastHeightSpruceNorth(H100,Latitude,plantedbool)),
+      (100-HagglundTimeToBreastHeightSpruceNorth(H100,Latitude,Plantedbool)),
+      (Age-HagglundTimeToBreastHeightSpruceNorth(H100,Latitude,Plantedbool)),
       Latitude,
-      plantedbool
+      Plantedbool
       );
   } else { //Southern Sweden.
     DominantHeight = HagglundHeightSpruceSouth(
@@ -481,11 +524,9 @@ if(H100<=17.9){
 //main always returns 0 if everything OK.
 int main()
 {
-  
-  //Southern Sweden
-  std::cout << "12 m at 20 yr at 20 yr should be 12: " << HagglundHeightSpruceSouth(12,20,20) << "\n"
-            << "20 m at 40 yr at 100 yr should be G32: " << HagglundHeightSpruceSouth(20.7,40,100) << "\n"
-            << "G34 at 70 yr should be 30.6 : " << HagglundHeightSpruceSouth(34,100,70) << std::endl;
-  
+
+  ErikssonStand a = ErikssonStand(32,10,57,3500);
+  a.report();
+
   return 0;
 }
