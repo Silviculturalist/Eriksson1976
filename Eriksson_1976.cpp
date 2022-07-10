@@ -45,8 +45,6 @@ class ErikssonStand{
         double QmdUnderBarkThinnedCm{0};
         double QmdSelfThinnedCm{0};
         double Volume{0};
-        double IV{0};
-        double DryWeightIncrementTons{0};
         int Period{0};
         int IncrementYears{5};
         double TotalBAThinned{0};
@@ -56,9 +54,14 @@ class ErikssonStand{
         double ThinnedBALastPeriod{0};
         double GroupStructureIndex{0}; //Coefficient of variation for the BA under bark on 5 meter circular plots inH100de the sample plot.. in percent.
         int Plantedbool{1}; // 1 if planted, 0 if natural regeneration.
+        double MAI_VOL{0};
+        double MAI_BA{0};
+        double CAI_VOL{0};
+        double CAI_BA{0};
         
         //Constructors
-        ErikssonStand(double h100, double startHeight, double latitude, int stems){
+        ErikssonStand(double h100, double startHeight, double latitude, int stems, int increment=5){
+          IncrementYears = increment;
           H100 = h100;
           Latitude= latitude;
           AgeBH  = (int) (BHAgeFinder(h100,latitude,startHeight)+0.5); //round to integer.
@@ -95,17 +98,35 @@ class ErikssonStand{
           //Volume of the stand.
           Volume = BasalAreaM2*FormHeight;
 
+          //Mean Annual Increments: 
+          MAI_VOL = Volume/Age;
+          MAI_BA = BasalAreaM2/Age;
+                    
+          //Bark procent removal
+          this->barkprocentremoval();
 
+          //Basal area under bark.
+          BasalAreaUnderBarkM2 = BasalAreaM2-((BasalAreaM2*BarkProcentRemoval)/100);
 
+          //QMD under bark, in cm.
+          QmdUnderBarkCm = 2* sqrt(((BasalAreaUnderBarkM2/StemsStart)*10000)/3.14159265359);
+                    
+          //First period always no thinning.
+          ThinningPercentPeriodXUnderBark=0;
 
+          //Annual basal area increment
+          this->bai();
+
+          this->barkprocentaddition();
+
+          //BAI over bark 
+          CAI_BA = ((BarkProcentAddition*BAI)/100 + BAI);
         };
         
         void barkprocentaddition(); // Bark percent addition to BA.
         void barkprocentremoval(); //Bark percent removal to BA.
         void selfthinnedba(); // Mortality from self-thinning.
-        void iv(); //Volume increment during the period.
-        void bai(); // Basal Area Increment during the period.
-        void dryweightincrement(); //Increment in Dry Weight (tons per hectare).
+        void bai(); // Basal Area Increment during the period. Not suitable for stands with a dominant height < 7 m.
         void formheight(); //The Form-Height of a stand.
         void selfthinneddiameter(); //Calculate the diameter of the self-thinned stems.
         void stemsselfthinned(); //Calculate the number of self-thinned stems.
@@ -134,9 +155,15 @@ void ErikssonStand::report()
             << "Age BH = "<< AgeBH << "\n"
             << "Dominant Height = "<< DominantHeight << "\n"
             << "BA = " << BasalAreaM2 << "\n"
+            << "BAI = " << BAI << "\n"
+            << "CAI BA = " << CAI_BA << "\n"
             << "Form Height = " << FormHeight << "\n"
             << "Volume m3sk = " << Volume << "\n"
-            << "QMDcm = " << QmdCm << std::endl;
+            << "CAI VOL = " << CAI_VOL << "\n"
+            << "QMDcm = " << QmdCm << "\n"
+            << "QMD UB cm = " << QmdUnderBarkCm <<  "\n" 
+            << "MAI VOL = " << MAI_VOL << "\n"
+            << "MAI BA = " << MAI_BA << std::endl;
 }
 
 
@@ -210,70 +237,8 @@ void ErikssonStand::formheight()
 }
 
 
-void ErikssonStand::dryweightincrement()
-{
-    double b1;
-    double b2;
-    double b3;
-    double b4;
-    double b5;
-    double b6;
-    double c1;
 
-    if(H100<=17.9){
-    //G16
-    b1 = 0.320;
-    b2 = -0.131;
-    b3 = 0.065;
-    b4 = 0.991;
-    b5 = -0.842;
-    b6 = -0.295;
-    c1 = 0.447;
-  } else if(H100<=21.9){
-    //G20
-    b1 = 0.455;
-    b2 = -0.137;
-    b3 = 0.064;
-    b4 = 0.900;
-    b5 = -0.866;
-    b6 = -0.255;
-    c1 = 0.488;
-  } else if(H100<=25.9){
-    //G24
-    b1 = 0.523;
-    b2 = -0.138;
-    b3 = 0.092;
-    b4 = 0.765;
-    b5 = -0.702;
-    b6 = -0.194;
-    c1 = 0.498;
-  } else if(H100<=29.9){
-    //G28
-    b1 = 0.399;
-    b2 = -0.136;
-    b3 = 0.012;
-    b4 = 0.821;
-    b5 = -0.786;
-    b6 = -0.131;
-    c1 = 0.568;
-  } else if(H100>=30){
-    //G32
-    b1 =  0.442;
-    b2 = -0.125;
-    b3 = 0.021;
-    b4 = 0.770;
-    b5 = -0.814;
-    b6 = -0.065;
-    c1 = 0.763;
-  }
-
-    double VG = 13.778 * pow((Age/10),c1) * pow((StemsStart/1000),-0.052); //Group structure index (p. 112), coef. variation for basal area under bark on 5 meter circular plots inside the sample plots.
-
-
-    DryWeightIncrementTons = 0.072 * pow(BasalAreaUnderBarkM2,b1) * pow((ThinningPercentPeriodXUnderBark+0.01),b2) * pow((QmdUnderBarkThinnedCm/(QmdUnderBarkCm+0.1)) * ((100*StemsThinned)/(StemsStart+0.01)),0.081) * pow(IncrementYears,b3) * pow((DominantHeight*10),b4) * pow(Age,b5) * pow(VG,b6);
-};
-
-void ErikssonStand::bai()
+void ErikssonStand::bai() 
 {
     double b1;
     double b2;
@@ -331,90 +296,14 @@ void ErikssonStand::bai()
     c1 = 0.763;
   }
 
-  double VG = 13.778 * pow((Age/10),c1) * pow((StemsStart/1000),-0.052) ; //Group structure index (p. 112), coef. variation for basal area under bark on 5 meter circular plots inside the sample plots.
+  double VG = 13.778 * pow((AgeBH/10),c1) * pow((StemsStart/1000),-0.052) ; //Group structure index (p. 112), coef. variation for basal area under bark on 5 meter circular plots inside the sample plots.
 
 
     BAI = 2.635 * pow(BasalAreaUnderBarkM2,b1) * pow((ThinningPercentPeriodXUnderBark+0.01),b2) * pow(
-        (QmdUnderBarkThinnedCm/(QmdUnderBarkCm+0.1)) * ((100*StemsThinned)/(StemsStart+0.01)),0.024 //Note 0.024 is corrected from typo p. 63.
-    ) * pow(IncrementYears,b3) * pow((DominantHeight*10),b4) * pow(Age,b5) * pow(VG,b6)  ;
+        ((QmdUnderBarkThinnedCm/(QmdUnderBarkCm)+0.1) * ((100*StemsThinned)/(StemsStart)+0.01)),0.024 //Note 0.024 is corrected from typo p. 63.
+    ) * pow(IncrementYears,b3) * pow((DominantHeight*10),b4) * pow(AgeBH,b5) * pow(VG,b6)  ;
 }
 
-
-
-
-
-
-
-void ErikssonStand::iv() // Calculate Annual volume increment under bark per hectare m^3.
-{
-
-
-    double b1;
-    double b2;
-    double b3;
-    double b4;
-    double b5;
-    double b6;
-    double c1;
-
-
-    if(H100<=17.9){
-    //G16
-    b1 = 0.253;
-    b2 = -0.100;
-    b3 = 0.067;
-    b4 = 1.103;
-    b5 = -0.906;
-    b6 = -0.296;
-    c1 = 0.447;
-  } else if(H100<=21.9){
-    //G20
-    b1 = 0.370;
-    b2 = -0.107;
-    b3 = 0.080;
-    b4 = 1.015;
-    b5 = -0.939;
-    b6 = -0.233;
-    c1 = 0.488;
-  } else if(H100<=25.9){
-    //G24
-    b1 = 0.435;
-    b2 = -0.109;
-    b3 = 0.109;
-    b4 = 0.831;
-    b5 = -0.730;
-    b6 = -0.125;
-    c1 = 0.498;
-  } else if(H100<=29.9){
-    //G28
-    b1 = 0.322;
-    b2 = -0.108;
-    b3 = 0.042;
-    b4 = 0.907;
-    b5 = -0.795;
-    b6 = -0.109;
-    c1 = 0.568;
-  } else if(H100>=30){
-    //G32
-    b1 =  0.358;
-    b2 = -0.097;
-    b3 = 0.035;
-    b4 = 0.868;
-    b5 = -0.861;
-    b6 = -0.042;
-    c1 = 0.763;
-  }
-
-
-
-
-    double VG = 13.778 * pow((Age/10),c1) * pow((StemsStart/1000),-0.052) ; //Group structure index (p. 112), coef. variation for basal area under bark on 5 meter circular plots inside the sample plots.
-
-    IV = 0.141 * (pow(BasalAreaUnderBarkM2,b1)) * (pow((ThinningPercentPeriodXUnderBark-0.01),b2)) * pow(((QmdUnderBarkThinnedCm / (QmdUnderBarkCm + 0.1))*((100*StemsThinned)/(StemsStart+0.01))),0.062) * pow((IncrementYears/10),b3) * pow((DominantHeight*10),b4) * pow((Age/10),b5) * pow(VG,b6) ;
-
-
-
-}
 
 void ErikssonStand::selfthinnedba() //Calculate annual self-thinning (mortality) in basal area per hectare, m^2. 
 {
@@ -493,7 +382,7 @@ if(H100 <= 17.9){
     b1 = -0.280;
   }
 
-  BarkProcentAddition = 45.08*(pow(QmdUnderBarkCm,b1))*(pow(BasalAreaUnderBarkM2,-0.281))*(pow(Age,0.125));
+  BarkProcentAddition = 45.08*(pow(QmdUnderBarkCm,b1))*(pow(BasalAreaUnderBarkM2,-0.281))*(pow(AgeBH,0.125));
 
 }
 
@@ -527,7 +416,7 @@ if(H100<=17.9){
     b1 = -0.243;
   }
 
-    BarkProcentRemoval = 9.50 * (pow(QmdCm,b1)) * (pow(BasalAreaM2,0.135)) * (pow(Age,0.112));
+    BarkProcentRemoval = 9.50 * (pow(QmdCm,b1)) * (pow(BasalAreaM2,0.135)) * (pow(AgeBH,0.112));
 }
 
 
