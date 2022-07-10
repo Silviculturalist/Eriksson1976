@@ -131,19 +131,54 @@ class ErikssonStand{
         void selfthinneddiameter(); //Calculate the diameter of the self-thinned stems.
         void stemsselfthinned(); //Calculate the number of self-thinned stems.
         void setHeight(); // Dominant height at age + increment.
-        void report();
-
-
-
-        
-
-
-
+        void report(); //Simple terminal output.
+        void period(double ThinningPercent=0); //Updating function.
 
 
 };
 
 //Specific functions.
+
+void ErikssonStand::period(double thinningpercent){
+  //Update age.
+  Age+=IncrementYears;
+  AgeBH+=IncrementYears;
+
+  //update Dominant height
+  this->setHeight();
+
+  //Update basal area under bark at starting time.
+  BasalAreaUnderBarkM2+=BAI;
+
+  //Update bark procent addition.
+  this->barkprocentaddition();
+
+  //Update BasalAreaM2 at starting time.
+  BasalAreaM2=BasalAreaUnderBarkM2 + (BasalAreaUnderBarkM2*BarkProcentAddition)/100;
+
+  //Update QMDcm
+  QmdUnderBarkCm = 2* sqrt(((BasalAreaUnderBarkM2/StemsStart)*10000)/3.14159265359);
+
+  QmdCm = 2* sqrt(((BasalAreaM2/StemsStart)*10000)/3.14159265359);                
+
+
+  //Update form height
+  this->formheight();
+
+
+  //Calculate initial volume
+  Volume = BasalAreaM2*FormHeight;
+
+  //Mean Annual Increments: 
+  MAI_VOL = Volume/Age;
+  MAI_BA = BasalAreaM2/Age;
+  
+  //Apply thinnings.
+  ThinningPercentPeriodXUnderBark = thinningpercent;
+
+}
+
+
 
 
 
