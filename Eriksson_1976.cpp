@@ -35,6 +35,7 @@ class ErikssonStand{
         double BarkProcentAddition{0};
         double BarkProcentRemoval{0};
         double FormHeight{0};
+        double FormHeightThinned{0};
         double BAI{0};
         int StemsStart{0};
         int StemsThinned{0};
@@ -42,22 +43,23 @@ class ErikssonStand{
         int StemsEnd{0};
         double QmdCm{0};
         double QmdUnderBarkCm{0};
+        double QmdThinnedCm{0};
         double QmdUnderBarkThinnedCm{0};
         double QmdSelfThinnedCm{0};
-        double Volume{0};
-        int Period{0};
-        int IncrementYears{5};
-        double TotalBAThinned{0};
-        double ThinnedBAPeriodX{0};
-        double ThinningPercentPeriodXUnderBark{0};
-        double SelfThinnedBAPeriod{0};
-        double ThinnedBALastPeriod{0};
+        double Volume{0}; //Volume of stand, m3sk. (cubic metres.)
+        int Period{0}; //Period counter.
+        int IncrementYears{5}; // Years to increment by.
+        double ThinnedBA{0}; //Thinned Basal Area.
+        double ThinnedVOL{0}; // Thinned Volume during the period.
+        double ThinningPercent{0}; //Thinning during the period as percent of the BA under bark.
+        double SelfThinnedBA{0}; //The expected BA to be self-thinned from mortality.
+        double ThinningForm{0}; // QMD removed / QMD stand before thinning.
         double GroupStructureIndex{0}; //Coefficient of variation for the BA under bark on 5 meter circular plots inH100de the sample plot.. in percent.
         int Plantedbool{1}; // 1 if planted, 0 if natural regeneration.
-        double MAI_VOL{0};
-        double MAI_BA{0};
-        double CAI_VOL{0};
-        double CAI_BA{0};
+        double MAI_VOL{0}; //Mean Annual Increment - Volume.
+        double MAI_BA{0}; // ... - Basal Area.
+        double CAI_VOL{0}; // Current Annual Increment - Volume.
+        double CAI_BA{0}; // ... - Basal Area.
         
         //Constructors
         ErikssonStand(double h100, double startHeight, double latitude, int stems, int increment=5){
@@ -112,7 +114,7 @@ class ErikssonStand{
           QmdUnderBarkCm = 2* sqrt(((BasalAreaUnderBarkM2/StemsStart)*10000)/3.14159265359);
                     
           //First period always no thinning.
-          ThinningPercentPeriodXUnderBark=0;
+          ThinningPercent=0;
 
           //Annual basal area increment
           this->bai();
@@ -125,21 +127,20 @@ class ErikssonStand{
         
         void barkprocentaddition(); // Bark percent addition to BA.
         void barkprocentremoval(); //Bark percent removal to BA.
-        void selfthinnedba(); // Mortality from self-thinning.
+        void selfthinning(); // Mortality from self-thinning.
         void bai(); // Basal Area Increment during the period. Not suitable for stands with a dominant height < 7 m.
         void formheight(); //The Form-Height of a stand.
-        void selfthinneddiameter(); //Calculate the diameter of the self-thinned stems.
-        void stemsselfthinned(); //Calculate the number of self-thinned stems.
+        void formheightthinned(); //The Form-height of the thinned stems.
         void setHeight(); // Dominant height at age + increment.
         void report(); //Simple terminal output.
-        void period(double ThinningPercent=0); //Updating function.
+        void period(double thinningpercent=0, double thinningform=0); //Updating function.
 
 
 };
 
 //Specific functions.
 
-void ErikssonStand::period(double thinningpercent){
+void ErikssonStand::period(double thinningpercent, double thinningform){
   //Update age.
   Age+=IncrementYears;
   AgeBH+=IncrementYears;
@@ -174,7 +175,35 @@ void ErikssonStand::period(double thinningpercent){
   MAI_BA = BasalAreaM2/Age;
   
   //Apply thinnings.
-  ThinningPercentPeriodXUnderBark = thinningpercent;
+  ThinningPercent = thinningpercent;
+
+  //If thinningform == 0, calculate thinningform.
+  ThinningForm = (thinningform==0)? ((DominantHeight>284)?1:(0.768 + 0.00082*DominantHeight)):thinningform;
+  
+  //Calculate the QMD of the thinned stems.
+  QmdThinnedCm = ThinningForm*QmdCm; //Over bark.
+  QmdUnderBarkThinnedCm = ThinningForm*QmdUnderBarkCm; //Under bark.
+
+  //Closest number of removable stems. 
+  //NB truncation to integer.!
+  //NB using QMD of thinned stems to get mean basal area stem which is thinned. 
+  StemsThinned = (int) (thinningpercent*BasalAreaUnderBarkM2)/(3.14159265359*pow((QmdUnderBarkThinnedCm/2),2));
+
+  //The Actual Thinned BA.
+  ThinnedBA = StemsThinned*(3.14159265359*pow((QmdSelfThinnedCm/2),2));
+
+  //Form height of thinned?
+  this->formheightthinned();
+
+  //Get Thinned volume..
+  ThinnedVOL = ThinnedBA*FormHeightThinned;
+
+  //Self-thinning for period.
+  this->selfthinning();
+
+
+  //Get the expected basal area increment.
+  this->bai();
 
 }
 
@@ -198,7 +227,8 @@ void ErikssonStand::report()
             << "QMDcm = " << QmdCm << "\n"
             << "QMD UB cm = " << QmdUnderBarkCm <<  "\n" 
             << "MAI VOL = " << MAI_VOL << "\n"
-            << "MAI BA = " << MAI_BA << std::endl;
+            << "MAI BA = " << MAI_BA << "\n"
+            << "QMD SELF THIN = " << QmdSelfThinnedCm << std::endl;
 }
 
 
@@ -224,16 +254,60 @@ void ErikssonStand::setHeight()
 
 
 
-void ErikssonStand::stemsselfthinned() 
+void ErikssonStand::selfthinning() 
 {
-  StemsSelfThinned = (SelfThinnedBAPeriod * 40000)/(pow(QmdSelfThinnedCm,2) * 3.14159265359);
-}
-
-
-
-void ErikssonStand::selfthinneddiameter()
-{
+  double b1;
+  double b2;
+  double StemsStart2;
+  
+  //Get the QMD of the self-thinned stems (above bark), e.g. f. 8.1.1., p. 107.
   QmdSelfThinnedCm = (0.039* pow((DominantHeight * 10),0.517)) * QmdCm;
+  
+    //Modification required if StemsStart exceed 4500 and DominantHeight at same time is more than 15m.
+    if(DominantHeight>15 && StemsStart>4500){
+        StemsStart2 = StemsStart + 0.1*(StemsStart-4500);
+    } else {
+        StemsStart2 = StemsStart;
+    }
+
+    if(H100<=17.9){
+    //G16
+    b1 = 0.524;
+    b2 = 3.505;
+
+  } else if(H100<=21.9){
+    //G20
+    b1 = 1.858;
+    b2 = 3.376;
+
+  } else if(H100<=25.9){
+    //G24
+    b1 = 2.613;
+    b2 = 3.356;
+
+  } else if(H100<=29.9){
+    //G28
+    b1 = 2.872;
+    b2 = 3.347;
+
+  } else if(H100<=33.9){
+    //G32
+    b1 = 3.229;
+    b2 = 3.458;
+
+  } else if(H100>=34){
+    //G36
+    b1 = 2.646;
+    b2 = 3.479;
+  }
+  
+  SelfThinnedBA = 3.25 * (pow(10,-10)) * (pow((StemsStart2/1000),b1)) * (pow((DominantHeight*10),b2)) ;
+
+
+
+  StemsSelfThinned = (SelfThinnedBA * 40000)/(pow(QmdSelfThinnedCm,2) * 3.14159265359);
+
+  
 }
 
 
@@ -269,6 +343,39 @@ void ErikssonStand::formheight()
 
 
   FormHeight = pow(10,-1.141) * pow((DominantHeight*10),b1) * pow(QmdCm,0.123);
+}
+
+void ErikssonStand::formheightthinned()
+{
+  double b1;
+
+  if(H100<=17.9){
+    //G16
+    b1 = 0.835;
+
+  } else if(H100<=21.9){
+    //G20
+    b1 = 0.833; 
+
+  } else if(H100<=25.9){
+    //G24
+    b1 = 0.838;
+
+  } else if(H100<=29.9){
+    //G28
+    b1 = 0.838;
+
+  } else if(H100<=33.9){
+    //G32
+    b1 =  0.839;
+
+  } else if(H100>=34){
+  //G36
+  b1 = 0.844;
+  }
+
+
+  FormHeightThinned = pow(10,-1.141) * pow((DominantHeight*10),b1) * pow(QmdThinnedCm,0.123);
 }
 
 
@@ -334,56 +441,9 @@ void ErikssonStand::bai()
   double VG = 13.778 * pow((AgeBH/10),c1) * pow((StemsStart/1000),-0.052) ; //Group structure index (p. 112), coef. variation for basal area under bark on 5 meter circular plots inside the sample plots.
 
 
-    BAI = 2.635 * pow(BasalAreaUnderBarkM2,b1) * pow((ThinningPercentPeriodXUnderBark+0.01),b2) * pow(
+    BAI = 2.635 * pow(BasalAreaUnderBarkM2,b1) * pow((ThinningPercent+0.01),b2) * pow(
         ((QmdUnderBarkThinnedCm/(QmdUnderBarkCm)+0.1) * ((100*StemsThinned)/(StemsStart)+0.01)),0.024 //Note 0.024 is corrected from typo p. 63.
     ) * pow(IncrementYears,b3) * pow((DominantHeight*10),b4) * pow(AgeBH,b5) * pow(VG,b6)  ;
-}
-
-
-void ErikssonStand::selfthinnedba() //Calculate annual self-thinning (mortality) in basal area per hectare, m^2. 
-{
-    double b1;
-    double b2;
-    double StemsStart2;
-
-    //Modification required if StemsStart exceed 4500 and DominantHeight at same time is more than 15m.
-    if(DominantHeight>15 && StemsStart>4500){
-        StemsStart2 = StemsStart + 0.1*(StemsStart-4500);
-    } else {
-        StemsStart2 = StemsStart;
-    }
-
-    if(H100<=17.9){
-    //G16
-    b1 = 0.524;
-    b2 = 3.505;
-
-  } else if(H100<=21.9){
-    //G20
-    b1 = 1.858;
-    b2 = 3.376;
-
-  } else if(H100<=25.9){
-    //G24
-    b1 = 2.613;
-    b2 = 3.356;
-
-  } else if(H100<=29.9){
-    //G28
-    b1 = 2.872;
-    b2 = 3.347;
-
-  } else if(H100<=33.9){
-    //G32
-    b1 = 3.229;
-    b2 = 3.458;
-
-  } else if(H100>=34){
-    //G36
-    b1 = 2.646;
-    b2 = 3.479;
-  }
-    SelfThinnedBAPeriod = 3.25 * (pow(10,-10)) * (pow((StemsStart2/1000),b1)) * (pow((DominantHeight*10),b2)) ;
 }
 
 
@@ -466,6 +526,7 @@ int main()
 {
 
   ErikssonStand a = ErikssonStand(32,10,57,3500);
+  a.period();
   a.report();
 
   return 0;
