@@ -1,6 +1,8 @@
 #include <math.h>
 #include <iostream>
 #include "HagglundHeightSpruce.h" //For height functions.
+#include "ErikssonStemDistributions.h" //For stem distribution outputs.
+#include <vector>
 
 //Background function
 
@@ -134,9 +136,36 @@ class ErikssonStand{
         void setHeight(); // Dominant height at age + increment.
         void report(); //Simple terminal output.
         void period(double thinningpercent=0, double thinningform=0); //Updating function.
+        //void thinningGuide(); // A class holding thinning instructions to an ErikssonStand
 
 
 };
+
+//ThinningGuide
+class thinningGuide:ErikssonStand{
+  public:
+    int thinAgeMin; //Minimum thinning age
+    int thinAgeMax; //Maximum thinning age
+    double thinHeightMin; //Minimum dominant height for thinning
+    double thinHeightMax; // Maximum dominant height for thinning
+    double thinMinBA; //Minimum required basal area.
+    double minRemovalBA; //Minimum required removal (Basal Area).
+    double minRemovalVol; //Minimum required removal (volume cu.m.)
+    double FellingMinAge; //Minimum felling age allowed.
+    double FellingMaxAge; //Maximum felling age allowed.
+
+  void queueThinning(double thinQuotient, double thinStrength); //Queue a thinning at first possible time.
+  void queueThinningAge(double thinQuotient, double thinStrength, double ageBH); //Queue a thinning at age.
+  void queueThinningHeight(double thinQuotient, double thinStrength, double atHeight); //Queue a thinning at height.
+  void queueThinningRule(); //Thin if evaluates to true.
+  void queueRecurringThinning(double thinQuotient, double thinStrength, double intervalYears); //Recurring thinning.
+  void queueFellingRule(); //Felling allowed if evaluates to true.
+
+  private:
+    std::vector<double> thinningQueue;
+
+}
+
 
 //Specific functions.
 
@@ -531,3 +560,5 @@ int main()
 
   return 0;
 }
+
+
