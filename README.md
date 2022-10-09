@@ -20,6 +20,7 @@ Reference:
 * StandManager.h oversees interaction between StandObjects and their ThinningManager. Implements the incremental process (thin and then increment..)
 
 ## TODO:
+* Remove superfluous #includes for Eriksson1976v2.cpp (Eriksson_1976.cpp is deprecated but not removed for ongoing comparisons between major version changes.)
 * Implement StandObject::cut() - to conduct a thinning and update vals.
 * Implement StandObject::result() - to print results.
 * Implement ThinningManager. - Currently no effect. Based on variables and objects from earlier practice runs.
