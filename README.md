@@ -18,3 +18,9 @@ Reference:
 * ThinningManager.h holds management rules and checks for a StandObject.
 
 * StandManager.h oversees interaction between StandObjects and their ThinningManager. Implements the incremental process (thin and then increment..)
+
+## TODO:
+* Implement StandObject::cut() - to conduct a thinning and update vals.
+* Implement StandObject::result() - to print results.
+* Implement ThinningManager. - Currently no effect. Based on variables and objects from earlier practice runs.
+* Implement StandManager. Currently no effect. as ThinningManager.
