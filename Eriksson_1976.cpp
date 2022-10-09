@@ -1,3 +1,4 @@
+/*
 #include <math.h>
 #include <iostream>
 #include "HagglundHeightSpruce.h" //For height functions.
@@ -562,3 +563,4 @@ int main()
 }
 
 
+*/

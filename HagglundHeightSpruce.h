@@ -127,7 +127,6 @@ double HagglundHeightSpruceNorth(double heightm, double age, double age2, double
   double AI3;
   double H2;
   double H1=(heightm*10)-13;
-  double RM;
   double RM2;
   double RK;
   double DIF;
@@ -189,9 +188,7 @@ double HagglundTimeToBreastHeightSpruceNorth(double H100, double latitude, bool 
   double AI1 = 10;
   double AI2 = 600;
   double AI3;
-  double H2;
   double H1=(H100*10)-13;
-  double RM;
   double RM2;
   double RK;
   double DIF;
@@ -247,15 +244,7 @@ double BHAgeFinder(double h100, double latitude, double targetHeight){
     if(latitude>60){ // Northern Sweden
         do
         {
-            try
-            {
-                currentHeight= HagglundHeightSpruceNorth(h100,(100-HagglundTimeToBreastHeightSpruceNorth(h100,latitude,1)),AgeEstimate,latitude,1);
-                throw(1);
-            }
-            catch(int errorNum){
-                // Nothing to be done.
-            }
-            
+            currentHeight= HagglundHeightSpruceNorth(h100,(100-HagglundTimeToBreastHeightSpruceNorth(h100,latitude,1)),AgeEstimate,latitude,1);
             HeightTest = (targetHeight > currentHeight)?1:0;
             AgeEstimate+=0.1;
         } while (HeightTest==1);
@@ -263,15 +252,7 @@ double BHAgeFinder(double h100, double latitude, double targetHeight){
     } else { //Southern Sweden.
         do
         {
-            try
-            {
-                currentHeight = HagglundHeightSpruceSouth(h100,(100-HagglundTimeToBreastHeightSpruceSouth(h100)),AgeEstimate);
-                throw(1);
-            }
-            catch(int errorNum){
-                //Nothing to be done.
-            }
-            
+            currentHeight = HagglundHeightSpruceSouth(h100,(100-HagglundTimeToBreastHeightSpruceSouth(h100)),AgeEstimate);
             HeightTest = (targetHeight > currentHeight)?1:0;
             AgeEstimate+=0.1;
         } while (HeightTest==1);
