@@ -69,8 +69,8 @@ bool ThinningManager::thinningOK()
             (stand->Volume.back()) >= minThinRemove && //at least minimum level of harvest exists.
             (stand->Volume.back()) >= minThinInitVol && //at least initial volume of harvest exists.
             (stand->Volume.back()) <= maxThinInitVol && //at most maximum volume at which thinning is allowed.
-            (stand->Volume.size()) >= minThinAge && //at least minimum thinning age.
-            (stand->Volume.size()) <= maxThinAge //at most maximum thinning age.
+            (stand->Age.back()) >= minThinAge && //at least minimum thinning age.
+            (stand->Age.back()) <= maxThinAge //at most maximum thinning age.
         )?true:false; //stock is smaller than the largest thinning is allowed at.
     
     return thinningVal;

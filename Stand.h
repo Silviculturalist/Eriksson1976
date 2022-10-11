@@ -46,7 +46,7 @@ class StandObject{
         void initialBA(); // calculate initial basal area of stand.
         void formheight(); //the form height of the stand.
         void formheightthinned(); //Form height of the thinned stand.
-        void bai(int increment); // Basal area increment during the period. Not suitable for stands with dominant height < 7 m.
+        double bai(int increment); // Basal area increment during the period. Not suitable for stands with dominant height < 7 m.
         void selfthinning(); // Mortality from self-thinning.
         double barkprocentaddition(); // Bark percent addition to BA.
         double barkprocentremoval(); // Bark percent removal to BA.
@@ -59,8 +59,66 @@ class StandObject{
 
 };
 
+
+void StandObject::growth_period(){
+  /*
+  int periodIncrement = getIncrement(); //request next increment.
+
+  //Basal area increment under bark. OBS per annum!
+  BAI.push_back(bai(periodIncrement)*periodIncrement); // Total increment is annual times number of periods.
+  BasalAreaUnderBarkM2.push_back(BasalAreaUnderBarkM2.back()+BAI.back()); //increment Basal area under bark.
+  QmdUnderBarkCm.push_back()
+  BasalAreaM2.push_back(BasalAreaUnderBarkM2.back()+(barkprocentaddition()*BasalAreaUnderBarkM2.back()/100)) //bark procent addition.
+  */
+
+
+};
+
+
+void StandObject::result(){
+  //Print header for csv format.
+  std::cout << "H100;Latitude;Planted;Age;AgeBH;DomH;BA;BAUB;FH;FH Thinned;StemsStart;StemsThinned;StemsSelfThinned;StemsEnd;QMD;QMDUB;QMDThinned;QMDUBThinned;QMDSelfThinned;Volume;ThinnedBA;ThinnedVOL;ThinningPercent;SelfThinnedBA;ThinningForm;MAI_VOL;MAI_BA;CAI_VOL;BAI;BAIoverBark;" << std::endl;
+
+  for(int i=0; i<Volume.size(); i++){
+    std::cout << H100 << ";"
+              << Latitude << ";"
+              << Plantedbool << ";"
+              << Age[i] << ";" 
+              << AgeBH[i] << ";" 
+              << DominantHeight[i] << ";" 
+              << BasalAreaM2[i] << ";"
+              << BasalAreaUnderBarkM2[i] << ";"
+              << FormHeight[i] << ";"
+              << FormHeightThinned[i] << ";"
+              << StemsStart[i] << ";"
+              << StemsThinned[i] << ";"
+              << StemsSelfThinned[i] << ";"
+              << StemsEnd[i] << ";"
+              << QmdCm[i] << ";"
+              << QmdUnderBarkCm[i] << ";"
+              << QmdThinnedCm[i] << ";"
+              << QmdUnderBarkThinnedCm[i] << ";"
+              << QmdSelfThinnedCm[i] << ";"
+              << Volume[i] << ";"
+              << ThinnedBA[i] << ";"
+              << ThinnedVOL[i] << ";"
+              << ThinningPercent[i] << ";"
+              << SelfThinnedBA[i] << ";"
+              << ThinnedBA[i] << ";"
+              << ThinningForm[i] << ";"
+              << MAI_VOL[i] << ";"
+              << MAI_BA[i] << ";"
+              << CAI_VOL[i] << ";"
+              << BAI[i] << ";"
+              << BAIoverBark[i] << ";" 
+              << std::endl;
+
+  }
+  
+}
+
 //Update the basal area increment.
-void StandObject::bai(int increment) 
+double StandObject::bai(int increment) 
 {
     double b1;
     double b2;
@@ -125,7 +183,7 @@ void StandObject::bai(int increment)
         ((QmdUnderBarkThinnedCm.back()/(QmdUnderBarkCm.back())+0.1) * ((100*StemsThinned.back())/(StemsStart.back())+0.01)),0.024 //Note 0.024 is corrected from typo p. 63.
     ) * pow(increment,b3) * pow((DominantHeight.back()*10),b4) * pow(AgeBH.back(),b5) * pow(VG,b6)  ;
 
-  BAI.push_back(baiVal);  
+  return baiVal;  
 };
 
 //Update barkprocentaddition
@@ -237,7 +295,7 @@ void StandObject::selfthinning()
   double StemsStart2;
   
   //Get the QMD of the self-thinned stems (above bark), e.g. f. 8.1.1., p. 107.
-  QmdSelfThinnedCm.back() = (0.039* pow((DominantHeight.back() * 10),0.517)) * QmdCm.back();
+  QmdSelfThinnedCm.push_back((0.039* pow((DominantHeight.back() * 10),0.517)) * QmdCm.back());
   
     //Modification required if StemsStart exceed 4500 and DominantHeight at same time is more than 15m.
     if(DominantHeight.back()>15 && StemsStart.back()>4500){
@@ -424,20 +482,36 @@ StandObject::StandObject
                     
         //First period never any thinning.
         ThinningPercent.push_back(0);
+        ThinningForm.push_back(0);
+        ThinnedVOL.push_back(0);
+        ThinnedBA.push_back(0);
         StemsThinned.push_back(0);
+        FormHeightThinned.push_back(0);
         QmdUnderBarkThinnedCm.push_back(0);
+        QmdThinnedCm.push_back(0);
+
+        //Get self-thinning (need to be multiplied by length of period..)
+        selfthinning();
 
         //get increment
         int increment = getIncrement();
 
-        //Annual basal area increment
-        bai(increment);
+        //make sure self thinning is period length..
+        SelfThinnedBA.back() = SelfThinnedBA.back()*increment;
+        StemsSelfThinned.back() = StemsSelfThinned.back()*increment;
 
+        //Stems end.
+        StemsEnd.push_back(StemsStart.back()-StemsSelfThinned.back());
+
+        //Annual basal area increment
+        BAI.push_back(bai(increment));
+        
         //BAI over bark 
         BAIoverBark.push_back(((barkprocentaddition()*BAI.back())/100 + BAI.back()));
 
         //Mean Annual Increments: 
         MAI_VOL.push_back(Volume.back()/Age.back());
         MAI_BA.push_back(BasalAreaM2.back()/Age.back());
+        CAI_VOL.push_back(0); //cannot calculate current annual increment for first year.
                 
 };
