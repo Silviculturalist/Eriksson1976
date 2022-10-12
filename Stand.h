@@ -29,7 +29,7 @@ class StandObject{
         std::vector<double> Volume; //Volume of stand, m3sk. (cubic metres.)
         std::vector<double> ThinnedBA; //Thinned Basal Area.
         std::vector<double> ThinnedVOL; // Thinned Volume during the period.
-        std::vector<double> ThinningPercent; //Thinning during the period as percent of the BA under bark.
+        std::vector<double> ThinningPercent; //Thinning during the period as percent of the BA ABOVE bark.
         std::vector<double> SelfThinnedBA; //The expected BA to be self-thinned from mortality.
         std::vector<double> ThinningForm; // QMD removed / QMD stand before thinning.
         std::vector<double> MAI_VOL; //Mean Annual Increment - Volume.
@@ -40,19 +40,24 @@ class StandObject{
         
         //General functions
         void growth_period(); //growth section.
-        void cut(double vol); //cutting action
+        void cutAbsoluteDefault(double BARemoved); //with standard form..
+        void cutPercentDefault(double BAPercent);
+        void cutRemainingDefault(double BARemaining);
+        void cutAbsolute(double BARemoved, double form); //with specified form. 
+        void cutPercent(double BAPercent, double form); 
+        void cutRemaining(double BARemaining, double form);
         void result(); //get results..
 
         //Eriksson1976 specific helpers.
         int getIncrement(){return 5;};
         void initialBA(); // calculate initial basal area of stand.
         double formheight(double qmd); //the form height of the stand.
-        void formheightthinned(); //Form height of the thinned stand.
         double bai(int increment); // Basal area increment during the period. Not suitable for stands with dominant height < 7 m.
         void selfthinning(int period); // Mortality from self-thinning.
         double barkprocentaddition(); // Bark percent addition to BA.
         double barkprocentremoval(); // Bark percent removal to BA.
         double getHeight(int requestedAge); //get height at age.
+        double getDefaultThinningForm();
 
         //Constructor Destructor.
         StandObject(double h100, double startHeight, double latitude, int stems, bool planted); //Constructor
@@ -61,7 +66,96 @@ class StandObject{
 
 };
 
+//Get suggested default thinning form.. p. 111. f. 8.1.2.
+double StandObject::getDefaultThinningForm()
+{
+  return((0.0768 + 0.00082*DominantHeight.back()));  
+};
 
+//Cut a fix amount of the basal area (m2).
+void StandObject::cutAbsolute(double BARemoved, double form)
+{
+  //Thinned BA
+  ThinnedBA.push_back(BARemoved);
+
+  //BA Thinned under bark..
+  double ThinnedBAUB = (BARemoved - (BARemoved*barkprocentremoval()/100));
+
+  //QMD of removed stems.
+  QmdThinnedCm.push_back(
+    QmdCm.back()*form
+  );
+
+  //QMD under bark of thinned stems..
+  QmdUnderBarkThinnedCm.push_back(
+    QmdUnderBarkCm.back()*form
+  );
+
+  //No. stems removed. e.g. p. 107.
+  StemsThinned.push_back(
+    (BARemoved*40000)/(QmdThinnedCm.back()*3.1415926)
+  );
+
+  //Total BA thinned.
+  ThinnedBA.push_back(BARemoved);
+
+  //Percent of BA thinned.
+  ThinningPercent.push_back(
+    BARemoved/BasalAreaM2.back()
+  );
+
+  //Thinned Volume. - QMD for form height is the QMD of the thinned! 
+  ThinnedVOL.push_back(
+    BARemoved*formheight(QmdThinnedCm.back())
+  );
+
+  //Reduce BA
+  BasalAreaM2.back()-=BARemoved;
+  BasalAreaUnderBarkM2.back()-=BARemoved;
+
+};
+
+//Cut a certain percent of the standing basal area.
+void StandObject::cutPercent(double BAPercent, double form)
+{
+  //Get absolute level.
+  double BARemoved = BAPercent*BasalAreaM2.back();
+
+  //Remove percentage.
+  StandObject::cutAbsolute(BARemoved, form);
+
+};
+
+//Cut so that a certain basal area remains in the thinned stand.
+void StandObject::cutRemaining(double BARemaining, double form)
+{
+  //Get absolute level.
+  double BARemoved = BasalAreaM2.back() - BARemaining;
+  if(BARemoved<0) BARemoved = 0; // Do not remove negative amounts..
+
+  StandObject::cutAbsolute(BARemoved, form);
+
+};
+
+//cut an absolute amount with default form.
+void StandObject::cutAbsoluteDefault(double BARemoved)
+{
+  StandObject::cutAbsolute(BARemoved, getDefaultThinningForm());
+};
+
+//cut a percentage with default form
+void StandObject::cutPercentDefault(double BAPercent)
+{
+  StandObject::cutPercent(BAPercent, getDefaultThinningForm());
+};
+
+//cut to a remainder with default form.
+void StandObject::cutRemainingDefault(double BARemaining)
+{
+  StandObject::cutRemaining(BARemaining,getDefaultThinningForm());
+};
+
+//Every growth period...
 void StandObject::growth_period(){
   
   int periodIncrement = getIncrement(); //request next increment.
@@ -90,7 +184,7 @@ void StandObject::growth_period(){
   //Self thinning...
   //BA, QMD -> stems..
   selfthinning(periodIncrement);
-
+  
 
 
 };
