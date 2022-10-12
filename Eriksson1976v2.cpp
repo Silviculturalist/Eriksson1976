@@ -7,6 +7,7 @@ int main()
 {
   StandObject* erikssonStand = new StandObject(32,10,57,3500,true);
   erikssonStand->result();
+  erikssonStand->growth_period();
     
   return 0;
 }
