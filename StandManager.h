@@ -16,20 +16,31 @@ class StandManager{
             {}; //constructor body after the initializer list.
 
         ~StandManager(){};
-
-        void increment(){ thinner->processThinning(); stand->growth_fn(); }; //increment the stand.
-        void increment(int periods) //increment multiple times at once.
+        
+        int getIncrement();
+        void increment(){ int period=getIncrement(); thinner->processThinning(); stand->growth_period(period); }; //increment the stand by a standard amount
+        void increment(int periods) //increment by a set period
         {
             for(int i=0;i<periods;i++)
             {
+                int period = getIncrement(); //get number of years to increment
                 thinner->processThinning();
-                stand->growth_fn();
+                stand->growth_period(period);
 
             }
         }; //increment several times.
 
         void reportManagedStands();
 };
+
+//get number of years to increment 
+int StandManager::getIncrement(){
+    return (stand->Age.back()<=29)?6:(stand->Age.back()<=49)?8:10; 
+    
+    //bool thinAtInterval = ((thinner->thinInterval)>0)?true:false; //does thinning happen at set interval?
+    //bool thinAtDomHeight = ((thinner->))
+
+}
 
 void StandManager::reportManagedStands(){
     std::cout << "StandID: " << stand << std::endl;

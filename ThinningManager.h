@@ -1,23 +1,27 @@
 #pragma once
 #include <limits>
 #include "Stand.h"
+#include "thinningTask.h"
 
 //Definition for a ThinningManager that controls thinning for a StandObject.
 class ThinningManager {
     public:
         StandObject* stand; //ptr to the associated StandObject.
-        double minThinInitVol{0}; //0 for nonlimiting.
-        double maxThinInitVol{std::numeric_limits<double>::max()}; //max for nonlimiting.
+        double minThinInitBA{0}; //0 for nonlimiting.
+        double maxThinInitBA{std::numeric_limits<double>::max()}; //max for nonlimiting.
         int thinInterval{0}; //zero for no interval
         double minThinRemove{0}; //smallest possible value for nonlimiting.
-        double minLeaveVol{0}; //0 for not limiting, eg full harvest.
+        double minLeaveBA{0}; //0 for not limiting, eg full harvest.
         int minThinAge{0}; //-1 for not limiting.. lowest acceptable age for thinning.
         int maxThinAge{std::numeric_limits<int>::max()};
         int firstThinYear{0}; //Counter for when first thinning was held.
         int thinCounter{0}; //to be able to set firstThinYear and report total thinnings.
         double repeatAbs{0}; //repeat thinning absolute value
         double repeatPerc{0}; //repeat thinning percentual value.
-        std::vector<double> ThinVolArray = {0}; //only contains 1 element for start. A list of volumes to be removed at each period.
+        std::vector<double> ThinBAArray = {0}; //only contains 1 element for start. A list of volumes to be removed at each period.
+        std::vector<double> ThinBAAbsoluteArray = {0}; //to store absolute thinnings..
+        std::vector<double> ThinBAPercentArray = {0}; //to store a fix percentage thinning.
+        std::vector<double> ThinBARemainingArray = {-1}; //negative numbers if nil to avoid clear-felling.
 
         //Constructor and Destructor
         ThinningManager(StandObject* stand): stand(stand){}; //Takes a stand
@@ -25,6 +29,9 @@ class ThinningManager {
 
         double volumeDecision(); //Calculate volume to be removed.
         bool thinningOK(); //Check if thinning is allowed.
+        void setBAAbsoluteThinningAgeBH(int agebh, double amount); //set a thinning by removing a fix amount.
+        void setBAPercentThinningAgeBH(int agebh, double percent); //set a thinning with percent to remove.
+        void setBARemainingThinningAgeBH(int agebh, double baRemaining); //set a thinning with remaining amount of basal area.
 
         void setMinThinAge(int age)
         {
@@ -33,7 +40,7 @@ class ThinningManager {
 
         void setRepeatAbs(double cut)
         {
-            repeatAbs = (repeatAbs<0)?0:repeatAbs;//truncate to zero if less than zero.
+            cut = (cut<0)?0:cut;//truncate to zero if less than zero.
             repeatAbs= cut;
             repeatPerc= 0;
         };
@@ -48,17 +55,18 @@ class ThinningManager {
 
         void setThinInterval(int interval)
         {
-            (interval<0)?0:interval;
+            interval = (interval<0)?0:interval;
             thinInterval = interval;
         };
 
         void processThinning()
         { //process a thinning. calculate and conduct.
 
-            double vol = volumeDecision();
-            stand->cut(vol);
+            double ba = volumeDecision();
+            stand->cutAbsoluteDefault(ba);
         };
 };
+
 
 bool ThinningManager::thinningOK()
 {
@@ -66,9 +74,9 @@ bool ThinningManager::thinningOK()
 
     thinningVal = 
         (
-            (stand->Volume.back()) >= minThinRemove && //at least minimum level of harvest exists.
-            (stand->Volume.back()) >= minThinInitVol && //at least initial volume of harvest exists.
-            (stand->Volume.back()) <= maxThinInitVol && //at most maximum volume at which thinning is allowed.
+            (stand->BasalAreaM2.back()) >= minThinRemove && //at least minimum level of harvest exists.
+            (stand->BasalAreaM2.back()) >= minThinInitBA && //at least initial volume of harvest exists.
+            (stand->BasalAreaM2.back()) <= maxThinInitBA && //at most maximum volume at which thinning is allowed.
             (stand->Age.back()) >= minThinAge && //at least minimum thinning age.
             (stand->Age.back()) <= maxThinAge //at most maximum thinning age.
         )?true:false; //stock is smaller than the largest thinning is allowed at.
@@ -78,18 +86,18 @@ bool ThinningManager::thinningOK()
 
 double ThinningManager::volumeDecision()
 {
-    double volDecision{0}; //Default harvest nothing.
+    double baDecision{0}; //Default harvest nothing.
     bool decisionTree{false}; //has another setting taken a decision?
 
     //Can thinning be conducted?
     if(thinningOK())
     {
         //Scheduled harvesting takes priority.
-        if((ThinVolArray[0]>0 && ThinVolArray.size()>stand->Volume.size()) | (ThinVolArray.size()>1 && ThinVolArray.size()>stand->Volume.size())) //If list of volumes to harvest is greater than default 0.. (limit zero)
+        if((ThinBAArray[0]>0 && ThinBAArray.size()>stand->Volume.size()) | (ThinBAArray.size()>1 && ThinBAArray.size()>stand->Volume.size())) //If list of volumes to harvest is greater than default 0.. (limit zero)
         {
-            if (ThinVolArray.at(stand->Volume.size())>0) //check if any stated value at latest year. 
+            if (ThinBAArray.at(stand->Volume.size())>0) //check if any stated value at latest year. 
             {
-                volDecision = ThinVolArray.at(stand->Volume.size());
+                baDecision = ThinBAArray.at(stand->Volume.size());
                 decisionTree = true; //indicate a decision has been taken.
                 thinCounter++; //Increment number of thinnings.
             }
@@ -102,7 +110,7 @@ double ThinningManager::volumeDecision()
             {
                 if((((stand->Volume.size())-firstThinYear) % thinInterval)==0) //time since first thinning evenly divisible by interval?
                 {
-                    volDecision = std::max(repeatAbs,((repeatPerc/100)*(stand->Volume.back()))); //largest of repeatAbs or repeatPerc
+                    baDecision = std::max(repeatAbs,((repeatPerc/100)*(stand->Volume.back()))); //largest of repeatAbs or repeatPerc
                     decisionTree = true;
                     thinCounter++; //increment number of thinnings.
 
@@ -112,7 +120,7 @@ double ThinningManager::volumeDecision()
             //If first thinning has not been done.
             else if(thinCounter==0)
             {
-                    volDecision = std::max(repeatAbs,((repeatPerc/100)*(stand->Volume.back()))); //largest of repeatAbs or repeatPerc
+                    baDecision = std::max(repeatAbs,((repeatPerc/100)*(stand->Volume.back()))); //largest of repeatAbs or repeatPerc
                     decisionTree = true;
                     firstThinYear = int(stand->Volume.size()); //set age at first thinning.
                     thinCounter++; //first increment of thinCounter.
@@ -123,10 +131,10 @@ double ThinningManager::volumeDecision()
     }
 
     //Check volDecision logic.
-    volDecision = (volDecision<minThinRemove)?minThinRemove:volDecision;
-    volDecision = ((stand->Volume.back())-volDecision<minLeaveVol)?((stand->Volume.back())-minLeaveVol):volDecision; //must leave at least minLeaveVol
+    baDecision = (baDecision<minThinRemove)?minThinRemove:baDecision;
+    baDecision = ((stand->BasalAreaM2.back())-baDecision<minLeaveBA)?((stand->BasalAreaM2.back())-minLeaveBA):baDecision; //must leave at least minLeaveVol
 
     //return
-    return volDecision;
+    return baDecision;
     
 }

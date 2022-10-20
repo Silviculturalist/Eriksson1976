@@ -39,7 +39,7 @@ class StandObject{
         std::vector<double> BAIoverBark; //BA increment over bark.
         
         //General functions
-        void growth_period(); //growth section.
+        void growth_period(int periodIncrement); //growth section.
         void cutAbsoluteDefault(double BARemoved); //with standard form..
         void cutPercentDefault(double BAPercent);
         void cutRemainingDefault(double BARemaining);
@@ -49,7 +49,6 @@ class StandObject{
         void result(); //get results..
 
         //Eriksson1976 specific helpers.
-        int getIncrement(){return 5;};
         void initialBA(); // calculate initial basal area of stand.
         double formheight(double qmd); //the form height of the stand.
         double bai(int increment); // Basal area increment during the period. Not suitable for stands with dominant height < 7 m.
@@ -58,13 +57,24 @@ class StandObject{
         double barkprocentremoval(); // Bark percent removal to BA.
         double getHeight(int requestedAge); //get height at age.
         double getDefaultThinningForm();
+        int getIncrement(); //get number of increments (for first period only)
 
         //Constructor Destructor.
         StandObject(double h100, double startHeight, double latitude, int stems, bool planted); //Constructor
-        ~StandObject(); //Destructor
+        ~StandObject(){}; //Destructor
 
 
 };
+
+//get increment (for first period only, rest handled by StandManager)
+int StandObject::getIncrement(){
+
+    return (Age.back()<=29)?6:(Age.back()<=49)?8:10; 
+
+    //bool thinAtInterval = ((thinner->thinInterval)>0)?true:false; //does thinning happen at set interval?
+    //bool thinAtDomHeight = ((thinner->))
+
+}
 
 //Get suggested default thinning form.. p. 111. f. 8.1.2.
 double StandObject::getDefaultThinningForm()
@@ -93,7 +103,7 @@ void StandObject::cutAbsolute(double BARemoved, double form)
 
   //No. stems removed. e.g. p. 107.
   StemsThinned.push_back(
-    (BARemoved*40000)/(QmdThinnedCm.back()*3.1415926)
+    (int) std::ceil((BARemoved*40000.0)/(QmdThinnedCm.back()*3.1415926))
   );
 
   //Total BA thinned.
@@ -156,9 +166,7 @@ void StandObject::cutRemainingDefault(double BARemaining)
 };
 
 //Every growth period...
-void StandObject::growth_period(){
-  
-  int periodIncrement = getIncrement(); //request next increment.
+void StandObject::growth_period(int periodIncrement){
 
   //Basal area increment under bark. OBS per annum!
   BAI.push_back(bai(periodIncrement)*periodIncrement); // Total increment is annual times number of periods.
@@ -452,7 +460,7 @@ void StandObject::selfthinning(int periodLength)
   
   //Update vectors.
   SelfThinnedBA.push_back((3.25 * (pow(10,-10)) * (pow((StemsStart2/1000),b1)) * (pow((DominantHeight.back()*10),b2)))*periodLength);
-  StemsSelfThinned.push_back(((SelfThinnedBA.back() * 40000)/(pow(QmdSelfThinnedCm.back(),2) * 3.14159265359))*periodLength);
+  StemsSelfThinned.push_back((int) std::ceil(((SelfThinnedBA.back()*40000.0)/((pow(QmdSelfThinnedCm.back(),2) * 3.14159265359))))*periodLength);
 };
 
 //Update form height of stand.
