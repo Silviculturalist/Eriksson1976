@@ -13,8 +13,8 @@ int main(){
     ThinningList.addDblTask(BAPtr,22,1,5);//add double limit
     ThinningList.addIntTask(agePtr,15,2,32,0.3);//add integer limit
 
-    int intMatch = ThinningList.hasMatchInt();//check for match
-    int dblMatch = ThinningList.hasMatchDbl();//check for match  
+    task<int>* intMatch = ThinningList.getMatchInt();//check for match
+    task<double>* dblMatch = ThinningList.getMatchDbl();//check for match  
 
     std::cout   << "Double " << dblMatch
                 << "Int " << intMatch 
